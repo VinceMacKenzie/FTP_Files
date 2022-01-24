@@ -5,7 +5,7 @@ from turtle import pencolor
 from colorama import Fore, Back, Style
 import os
 
-HOST = '192.168.1.3'
+HOST = '217.61.7.196'
 PORT = 8000
 class connects:
     IP = []
