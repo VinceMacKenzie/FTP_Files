@@ -4,7 +4,7 @@ import time
 import os
 import sys
 
-HOST = '192.168.1.3'
+HOST = '217.61.7.196'
 PORT = 8000
 
 ACK_TEXT = 'text_received'
